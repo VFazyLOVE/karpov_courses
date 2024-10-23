@@ -1,0 +1,56 @@
+1.
+
+SELECT
+        date_trunc('month', timest) as month,
+        st_id,
+        SUM(correct) as total_correct
+FROM default.peas
+GROUP BY month, st_id
+HAVING total_correct >= 20
+
+2.
+
+SELECT
+    grp AS group,
+    (SUM(money) / COUNT(money)) AS arpu,
+    (SUM(money_10) / SUM(score > 10)) AS arpau,
+    (SUM(money > 0) / COUNT(money)) AS cr,
+    (SUM(money > 0 and score > 10) / SUM(score > 10)) AS cr_10_exercise,
+    (SUM(math_pay = 1) / SUM(math = 1)) AS cr_math
+FROM 
+(
+    SELECT
+        a.st_id AS id,
+        a.test_grp AS grp,
+        b.money AS money,
+        c.score AS score,
+        CASE WHEN c.score > 10 THEN b.money ELSE 0 END AS money_10,
+        b.math_pay AS math_pay,
+        c.math AS math
+    FROM studs AS a
+    
+    LEFT JOIN (
+            SELECT
+                st_id,
+                SUM(money) AS money,
+                MAX(CASE WHEN subject = 'Math' THEN 1 ELSE 0 END) AS math_pay
+            FROM final_project_check 
+            GROUP BY st_id) AS b 
+    ON a.st_id = b.st_id
+    
+    LEFT JOIN (
+            SELECT
+                st_id,
+                SUM(score) AS score,
+                SUM(math) AS math
+            FROM (
+                SELECT
+                    st_id,
+                    SUM(correct) AS score,
+                    CASE WHEN subject = 'Math' and score >= 2 THEN 1 ELSE 0 END AS math
+                FROM peas
+                GROUP BY st_id, subject)
+            GROUP BY st_id) AS c
+    ON a.st_id = c.st_id
+)
+GROUP BY grp
